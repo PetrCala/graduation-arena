@@ -7,9 +7,14 @@ parse / aggregate / build logic lands in later issues.
 
 from __future__ import annotations
 
+import json
 import logging
+from pathlib import Path
+from typing import Annotated
 
 import typer
+
+from ga_pipeline.oai import DEFAULT_METADATA_PREFIX, DEFAULT_SET_SPEC, OaiClient, OaiError
 
 logger = logging.getLogger("ga_pipeline")
 
@@ -39,9 +44,65 @@ def main(
 
 
 @app.command()
-def scrape() -> None:
-    """Fetch raw theses from the public source (TODO)."""
-    _todo("scrape")
+def scrape(
+    identifier: Annotated[
+        str | None,
+        typer.Option(
+            "--identifier",
+            "-i",
+            help="Fetch one OAI identifier, e.g. oai:dspace.cuni.cz:20.500.11956/176640.",
+        ),
+    ] = None,
+    limit: Annotated[
+        int,
+        typer.Option("--limit", "-n", min=1, help="Maximum records for ListRecords mode."),
+    ] = 10,
+    set_spec: Annotated[
+        str,
+        typer.Option("--set", help="OAI setSpec to list when --identifier is omitted."),
+    ] = DEFAULT_SET_SPEC,
+    metadata_prefix: Annotated[
+        str,
+        typer.Option("--metadata-prefix", help="OAI metadataPrefix to request."),
+    ] = DEFAULT_METADATA_PREFIX,
+    output: Annotated[
+        Path | None,
+        typer.Option("--output", "-o", help="Write JSON to this path instead of stdout."),
+    ] = None,
+    all_departments: Annotated[
+        bool,
+        typer.Option(
+            "--all-departments",
+            help="Do not filter the broad FSV thesis set down to Institute of Economic Studies.",
+        ),
+    ] = False,
+) -> None:
+    """Fetch raw OAI-PMH metadata from DSpace as RawThesis-shaped JSON."""
+    client = OaiClient()
+    try:
+        if identifier:
+            payload: dict | list = client.get_record(identifier, metadata_prefix).to_raw_thesis()
+        else:
+            payload = [
+                record.to_raw_thesis()
+                for record in client.list_records(
+                    metadata_prefix=metadata_prefix,
+                    set_spec=set_spec,
+                    limit=limit,
+                    ies_only=not all_departments,
+                )
+            ]
+    except OaiError as exc:
+        typer.echo(f"scrape failed: {exc}", err=True)
+        raise typer.Exit(code=1) from exc
+
+    text = json.dumps(payload, ensure_ascii=False, indent=2) + "\n"
+    if output is None:
+        typer.echo(text, nl=False)
+    else:
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(text, encoding="utf-8")
+        typer.echo(f"wrote {output}")
 
 
 @app.command()
