@@ -34,4 +34,4 @@ jobs:
         with:
           node-version: "20"
       - name: Type-check the TS types
-        run: npx -y typescript@5 tsc --noEmit --strict ts/types.ts ts/index.ts
+        run: npx -y -p typescript@5 tsc --noEmit --strict ts/types.ts ts/index.ts
