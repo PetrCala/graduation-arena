@@ -20,9 +20,18 @@ direction, not a spec.
    database. Sits comfortably on Firebase's free tier.
 
 3. **Storage split by role.**
-   - *Processing store* (during scrape/parse; local, not deployed): SQLite or Parquet —
-     resumable and inspectable.
+   - *Processing store* (during scrape/parse; local, not deployed): **SQLite**. A single
+     relational file gives row-level upsert/dedupe on `source_id`, resumable/incremental
+     (`--from`/`--until`) harvests, and SQL inspection — the right fit for a stage that
+     mutates rows. polars reads it directly for aggregation. (Parquet was considered but is
+     append-oriented and awkward for the row-level dedupe/resume the harvest needs.)
    - *Serving store* (what the site reads): static JSON artifacts on Firebase Hosting.
+   - *Serving artifacts* (`data/aggregates/*.json`) are **produced as a CI build artifact,
+     not committed to git** — `data/aggregates/` is git-ignored. These are per-evaluator
+     grade profiles (personal data); keeping them out of the public repo avoids publishing
+     personal data into permanent git history. What ships must be the GDPR-safe served
+     projection (min-N gating, no student names — #18) and is gated by the legal go/no-go
+     (#14).
    - Firestore is intentionally **not** used now. Revisit only if the data grows large or
      needs live queries/writes.
 
@@ -59,7 +68,7 @@ pydantic models  ──exports──►  JSON Schema  ──generates──►  
    │   scrape → parse → aggregate             │
    └───────────────┬──────────────────────────┘
                    │ writes
-            data/aggregates/*.json   (tiny, static)
+            data/aggregates/*.json   (tiny, static; CI build artifact, git-ignored)
                    │ bundled at build
    ┌───────────────┴──────────────────────────┐
    │   GH Actions on push: build static site   │
@@ -79,7 +88,7 @@ graduation-arena/
   schemas/       # shared contract: pydantic source + generated TS types
   data/
     fixtures/    # sample pages/PDFs + example aggregate JSON
-    aggregates/  # pipeline output (static JSON served to the site)
+    aggregates/  # pipeline output (static JSON; CI build artifact, git-ignored)
   .github/workflows/   # deploy + refresh (added later)
   docs/
 ```
@@ -89,5 +98,4 @@ graduation-arena/
 - **Final schema fields** — pending the source-access spike + real fixtures (A1) and the
   legal verdict on naming vs. anonymising/aggregating evaluators. A provisional `v0` draft
   comes first (K2).
-- **`data/aggregates/`** — commit to git vs. produce as a build artifact. TBD.
 - **Firestore** — only if data size or live-query needs outgrow static JSON.
