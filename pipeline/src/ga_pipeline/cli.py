@@ -10,6 +10,7 @@ from typing import Annotated
 import typer
 
 from ga_pipeline.oai import DEFAULT_SET_SPEC, HarvestConfig, OAIClient
+from ga_pipeline.parser import ParseSkipError, parse_raw_thesis
 from ga_pipeline.store import ProcessingStore
 
 logger = logging.getLogger("ga_pipeline")
@@ -121,9 +122,43 @@ def scrape(
 
 
 @app.command()
-def parse() -> None:
-    """Normalise scraped theses into structured records (TODO)."""
-    _todo("parse")
+def parse(
+    store: Annotated[
+        Path,
+        typer.Option(
+            "--store",
+            help="SQLite processing store to read raw records from and write parsed records into.",
+        ),
+    ] = DEFAULT_STORE,
+    include_non_ies: Annotated[
+        bool,
+        typer.Option(
+            "--include-non-ies",
+            help=(
+                "Parse every raw record instead of filtering to Institute of Economic "
+                "Studies theses."
+            ),
+        ),
+    ] = False,
+) -> None:
+    """Normalise scraped theses into structured parsed records."""
+    parsed = []
+    skipped = 0
+    with ProcessingStore(store) as processing_store:
+        for raw_thesis in processing_store.iter_raw_theses():
+            try:
+                parsed.append(
+                    (
+                        raw_thesis.source_id,
+                        parse_raw_thesis(raw_thesis, require_ies=not include_non_ies),
+                    )
+                )
+            except ParseSkipError as exc:
+                skipped += 1
+                logger.debug("skipping %s: %s", raw_thesis.source_id, exc)
+        processing_store.replace_parsed_theses(parsed)
+
+    typer.echo(f"parse: stored {len(parsed)} parsed thesis record(s), skipped {skipped}")
 
 
 @app.command()

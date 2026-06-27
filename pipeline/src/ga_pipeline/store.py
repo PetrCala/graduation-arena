@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from collections.abc import Iterator
+from datetime import datetime
 from pathlib import Path
 
-from ga_schemas.models import RawThesis
+from ga_schemas.models import ParsedThesis, RawThesis
 
 
 class ProcessingStore:
@@ -25,6 +27,16 @@ class ProcessingStore:
                 source_url TEXT NOT NULL,
                 fetched_at TEXT NOT NULL,
                 raw_fields_json TEXT NOT NULL
+            )
+            """
+        )
+        self.connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS parsed_theses (
+                id TEXT PRIMARY KEY,
+                source_id TEXT NOT NULL,
+                parsed_json TEXT NOT NULL,
+                FOREIGN KEY(source_id) REFERENCES raw_theses(source_id)
             )
             """
         )
@@ -52,4 +64,39 @@ class ProcessingStore:
                 thesis.fetched_at.isoformat(),
                 json.dumps(thesis.raw_fields, ensure_ascii=False, sort_keys=True),
             ),
+        )
+
+    def iter_raw_theses(self) -> Iterator[RawThesis]:
+        """Yield raw thesis records from the store in deterministic order."""
+        rows = self.connection.execute(
+            """
+            SELECT source_id, source_url, fetched_at, raw_fields_json
+            FROM raw_theses
+            ORDER BY source_id
+            """
+        )
+        for source_id, source_url, fetched_at, raw_fields_json in rows:
+            yield RawThesis(
+                source_id=source_id,
+                source_url=source_url,
+                fetched_at=datetime.fromisoformat(fetched_at),
+                raw_fields=json.loads(raw_fields_json),
+            )
+
+    def replace_parsed_theses(self, rows: list[tuple[str, ParsedThesis]]) -> None:
+        """Replace parsed thesis output with the supplied validated records."""
+        self.connection.execute("DELETE FROM parsed_theses")
+        self.connection.executemany(
+            """
+            INSERT INTO parsed_theses (id, source_id, parsed_json)
+            VALUES (?, ?, ?)
+            """,
+            [
+                (
+                    thesis.id,
+                    source_id,
+                    thesis.model_dump_json(exclude_none=True),
+                )
+                for source_id, thesis in rows
+            ],
         )

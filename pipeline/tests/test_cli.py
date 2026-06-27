@@ -3,11 +3,16 @@
 from __future__ import annotations
 
 import sqlite3
+from datetime import UTC, datetime
 from io import BytesIO
 
+import pytest
+from ga_schemas.models import RawThesis
 from typer.testing import CliRunner
 
 from ga_pipeline.cli import app
+from ga_pipeline.parser import ParseSkipError, parse_raw_thesis
+from ga_pipeline.store import ProcessingStore
 
 runner = CliRunner()
 
@@ -24,10 +29,54 @@ def test_help_lists_all_subcommands() -> None:
 
 def test_unimplemented_subcommands_report_todo() -> None:
     """The later stages remain wired up while their implementations are deferred."""
-    for sub in ("parse", "aggregate", "build"):
+    for sub in ("aggregate", "build"):
         result = runner.invoke(app, [sub])
         assert result.exit_code == 0, f"{sub} exited {result.exit_code}"
         assert "not implemented yet (TODO)" in result.stdout
+
+
+def test_parse_writes_valid_parsed_records(tmp_path) -> None:
+    """The parse command normalises stored raw theses into SQLite parsed rows."""
+    store = tmp_path / "processing.sqlite"
+    with ProcessingStore(store) as processing_store:
+        processing_store.upsert_raw_thesis(_raw_thesis("1", grade="Very good"))
+        processing_store.upsert_raw_thesis(_raw_thesis("2", grade=None))
+
+    result = runner.invoke(app, ["parse", "--store", str(store)])
+
+    assert result.exit_code == 0, result.output
+    assert "stored 1 parsed thesis record(s), skipped 1" in result.stdout
+    with sqlite3.connect(store) as connection:
+        row = connection.execute("SELECT parsed_json FROM parsed_theses").fetchone()
+
+    assert row is not None
+    assert '"defense_grade":2' in row[0]
+    assert '"language":"en"' in row[0]
+    assert '"role":"supervisor"' in row[0]
+
+
+def test_parse_handles_en_language_and_first_opponent() -> None:
+    """Parser accepts EN records and uses the first referee when multiple are present."""
+    thesis = parse_raw_thesis(
+        _raw_thesis(
+            "3",
+            language="en_US",
+            opponent=("Opponent, First", "Opponent, Second"),
+            grade="C",
+        )
+    )
+
+    assert thesis.language == "en"
+    assert thesis.level == "bachelor"
+    assert thesis.defense_grade == 2
+    assert thesis.opponent.name == "Opponent, First"
+    assert thesis.opponent.id == "opponent-first"
+
+
+def test_parse_skips_defended_records_missing_grade() -> None:
+    """Defended theses without a grade are excluded instead of silently emitted."""
+    with pytest.raises(ParseSkipError, match="missing a parseable grade"):
+        parse_raw_thesis(_raw_thesis("4", grade=None))
 
 
 def test_scrape_harvests_oai_records_into_sqlite(tmp_path, monkeypatch) -> None:
@@ -109,3 +158,81 @@ def _oai_page(token: str | None, handle: str) -> str:
   </ListRecords>
 </OAI-PMH>
 """
+
+
+def _raw_thesis(
+    source_suffix: str,
+    *,
+    language: str = "en_US",
+    opponent: tuple[str, ...] = ("Opponent, Ola",),
+    grade: str | None = "Excellent",
+) -> RawThesis:
+    grade_values = () if grade is None else (grade,)
+    return RawThesis(
+        source_id=f"oai:dspace.cuni.cz:20.500.11956/{source_suffix}",
+        source_url=f"https://dspace.cuni.cz/handle/20.500.11956/{source_suffix}",
+        fetched_at=datetime(2026, 6, 27, tzinfo=UTC),
+        raw_fields={
+            "metadata": _node(
+                children=[
+                    _branch(
+                        "dc",
+                        _branch(
+                            "contributor",
+                            _branch("advisor", _values("Advisor, Alice")),
+                            _branch("referee", _values(*opponent)),
+                        ),
+                        _branch("creator", _values("Student, Stan")),
+                        _branch("date", _branch("issued", _values("2024"))),
+                        _branch(
+                            "description",
+                            _branch(
+                                "department",
+                                _values(
+                                    "Institut ekonomických studií",
+                                    wrapper_names=("cs_CZ",),
+                                ),
+                            ),
+                            _branch("abstract", _values("An abstract.", wrapper_names=("en_US",))),
+                        ),
+                        _branch("language", _branch("iso", _values(language))),
+                        _branch("title", _values("A Thesis Title", wrapper_names=("en_US",))),
+                    ),
+                    _branch(
+                        "thesis",
+                        _branch("degree", _branch("name", _values("Bc."))),
+                        _branch("grade", _values(*grade_values)),
+                    ),
+                    _branch("uk", _branch("thesis", _branch("defenceStatus", _values("O")))),
+                ]
+            )
+        },
+    )
+
+
+def _branch(name: str, *children: dict) -> dict:
+    return _node(name=name, children=list(children))
+
+
+def _values(*values: str, wrapper_names: tuple[str, ...] = ("none",)) -> dict:
+    return _node(
+        name=wrapper_names[0],
+        children=[_node(tag="field", name="value", text=value) for value in values],
+    )
+
+
+def _node(
+    *,
+    tag: str = "element",
+    name: str | None = None,
+    text: str | None = None,
+    children: list[dict] | None = None,
+) -> dict:
+    node: dict = {"tag": tag}
+    if name is not None:
+        node["attrs"] = {"name": name}
+    if text is not None:
+        node["text"] = text
+    if children is not None:
+        node["children"] = children
+    return node
