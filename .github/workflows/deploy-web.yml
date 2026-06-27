@@ -1,0 +1,78 @@
+name: deploy web
+
+# Builds the SvelteKit static site in web/ and deploys it to Firebase Hosting.
+#   push to master   -> deploy to the live channel (production)
+#   pull_request     -> deploy to an ephemeral per-PR preview channel
+#
+# The build runs on every event so it gates PRs even before hosting is wired up.
+# The deploy steps are skipped (not failed) until the FIREBASE_SERVICE_ACCOUNT
+# repo secret exists, so CI stays green in the meantime. MANUAL SETUP, owner
+# @PetrCala: see docs/deploy.md before this can deploy.
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "web/**"
+      - "schemas/ts/**"
+      - "firebase.json"
+      - ".firebaserc"
+      - ".github/workflows/deploy-web.yml"
+  pull_request:
+    paths:
+      - "web/**"
+      - "schemas/ts/**"
+      - "firebase.json"
+      - ".firebaserc"
+      - ".github/workflows/deploy-web.yml"
+
+# Avoid stacking deploys: a newer push/PR update cancels an in-flight run.
+concurrency:
+  group: deploy-web-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    # Mapped from the secret so a step `if` can detect its absence — the
+    # `secrets` context is not available in `if`, but `env` is.
+    env:
+      FIREBASE_SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        working-directory: web
+        run: npm ci
+
+      - name: Build static site
+        working-directory: web
+        run: npm run build
+
+      - name: Deploy preview channel (pull request)
+        if: github.event_name == 'pull_request' && env.FIREBASE_SA != ''
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          projectId: default
+
+      - name: Deploy live channel (master)
+        if: github.event_name == 'push' && env.FIREBASE_SA != ''
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          projectId: default
+          channelId: live

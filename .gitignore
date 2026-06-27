@@ -11,6 +11,11 @@ node_modules/
 build/
 dist/
 
+# Firebase (CLI cache + logs; config files firebase.json/.firebaserc are tracked)
+.firebase/
+firebase-debug.log
+*-debug.log
+
 # Environment
 .env
 .env.*
