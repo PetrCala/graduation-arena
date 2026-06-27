@@ -1,0 +1,9 @@
+# Local-only scratch space: tools, throwaway scripts, artifacts, scratch data.
+# Nothing in this directory is committed except this .gitignore itself,
+# so the folder stays in the repo but its contents stay on your machine.
+
+# Ignore everything in this directory...
+*
+
+# ...except this file, so the folder is preserved in git.
+!.gitignore
