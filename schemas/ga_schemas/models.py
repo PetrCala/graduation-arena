@@ -79,6 +79,14 @@ class Evaluator(BaseModel):
         default=None,
         description="Stable identifier for the evaluator, if known. Scheme TBD.",
     )
+    # TODO(v0): how the image is sourced/stored is the subject of B4b (#37). Photos are
+    # served from the Firebase Hosting deploy, so this is typically a site-relative path
+    # (e.g. "/images/evaluators/<id>.webp"); an absolute URL is also valid. Optional and
+    # often absent — many evaluators (external opponents especially) have no photo.
+    image_url: Optional[str] = Field(
+        default=None,
+        description="Profile image reference (site-relative path or absolute URL), if any.",
+    )
     role: Optional[EvaluatorRole] = Field(
         default=None,
         description="Role for the referencing thesis, if applicable.",

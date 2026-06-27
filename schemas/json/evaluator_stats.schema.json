@@ -22,6 +22,19 @@
           "description": "Stable identifier for the evaluator, if known. Scheme TBD.",
           "title": "Id"
         },
+        "image_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Profile image reference (site-relative path or absolute URL), if any.",
+          "title": "Image Url"
+        },
         "role": {
           "anyOf": [
             {

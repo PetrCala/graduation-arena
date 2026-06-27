@@ -1,6 +1,10 @@
 [
   {
-    "evaluator": { "name": "doc. PhDr. Adam Geršl Ph.D.", "id": "gersl-adam" },
+    "evaluator": {
+      "name": "doc. PhDr. Adam Geršl Ph.D.",
+      "id": "gersl-adam",
+      "image_url": "/images/evaluators/sample-1.svg"
+    },
     "total_theses": 42,
     "grade_distribution": { "1": 25, "2": 13, "3": 3, "4": 1 },
     "grade_probabilities": { "1": 0.5952, "2": 0.3095, "3": 0.0714, "4": 0.0238 },
@@ -30,7 +34,11 @@
     "last_updated": "2026-06-27"
   },
   {
-    "evaluator": { "name": "prof. Ing. Michal Mejstřík CSc.", "id": "mejstrik-michal" },
+    "evaluator": {
+      "name": "prof. Ing. Michal Mejstřík CSc.",
+      "id": "mejstrik-michal",
+      "image_url": "/images/evaluators/sample-2.svg"
+    },
     "total_theses": 58,
     "grade_distribution": { "1": 40, "2": 14, "3": 3, "4": 1 },
     "grade_probabilities": { "1": 0.6897, "2": 0.2414, "3": 0.0517, "4": 0.0172 },

@@ -28,6 +28,12 @@ export interface Evaluator {
   name: string;
   /** Stable identifier, if known. Scheme TBD (TODO v0). */
   id?: string | null;
+  /**
+   * Profile image reference (site-relative path or absolute URL), if any. Sourcing/storage
+   * is B4b (#37); often absent. Served from the Hosting deploy, e.g.
+   * "/images/evaluators/<id>.webp".
+   */
+  image_url?: string | null;
   /** Role for the referencing thesis, if applicable. */
   role?: EvaluatorRole | null;
 }

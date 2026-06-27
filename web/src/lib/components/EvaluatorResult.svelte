@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { EvaluatorStats } from '$schemas';
 	import { gradeBreakdown, mostLikelyGrade } from '$lib/data/evaluators';
+	import Avatar from '$lib/components/Avatar.svelte';
 
 	let { role, name, stats }: { role: string; name: string; stats: EvaluatorStats | null } =
 		$props();
@@ -16,11 +17,16 @@
 	<h2 class="text-sm font-semibold tracking-wide text-gray-500 uppercase">{role}</h2>
 
 	{#if stats}
-		<p class="mt-1 font-medium">{stats.evaluator.name}</p>
-		<p class="text-sm text-gray-600">
-			{stats.total_theses} theses{#if topGrade}
-				· most likely grade {topGrade.grade} ({pct(topGrade.probability)}){/if}
-		</p>
+		<div class="mt-1 flex items-center gap-3">
+			<Avatar name={stats.evaluator.name} src={stats.evaluator.image_url} />
+			<div>
+				<p class="font-medium">{stats.evaluator.name}</p>
+				<p class="text-sm text-gray-600">
+					{stats.total_theses} theses{#if topGrade}
+						· most likely grade {topGrade.grade} ({pct(topGrade.probability)}){/if}
+				</p>
+			</div>
+		</div>
 
 		{#if rows.length > 0}
 			<ul class="mt-3 space-y-2">
