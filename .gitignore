@@ -1,0 +1,5 @@
+# Claude Code per-session worktrees — never commit these.
+.claude/worktrees/
+
+# Local per-user Claude Code settings (kept out of version control).
+.claude/settings.local.json
