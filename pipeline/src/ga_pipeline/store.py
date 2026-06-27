@@ -8,7 +8,7 @@ from collections.abc import Iterator
 from datetime import datetime
 from pathlib import Path
 
-from ga_schemas.models import ParsedThesis, RawThesis
+from ga_schemas.models import EvaluatorStats, ParsedThesis, RawThesis
 
 
 class ProcessingStore:
@@ -37,6 +37,14 @@ class ProcessingStore:
                 source_id TEXT NOT NULL,
                 parsed_json TEXT NOT NULL,
                 FOREIGN KEY(source_id) REFERENCES raw_theses(source_id)
+            )
+            """
+        )
+        self.connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS evaluator_stats (
+                evaluator_id TEXT PRIMARY KEY,
+                stats_json TEXT NOT NULL
             )
             """
         )
@@ -100,3 +108,44 @@ class ProcessingStore:
                 for source_id, thesis in rows
             ],
         )
+
+    def iter_parsed_theses(self) -> Iterator[ParsedThesis]:
+        """Yield parsed thesis records from the store in deterministic order."""
+        rows = self.connection.execute(
+            """
+            SELECT parsed_json
+            FROM parsed_theses
+            ORDER BY id
+            """
+        )
+        for (parsed_json,) in rows:
+            yield ParsedThesis.model_validate_json(parsed_json)
+
+    def replace_evaluator_stats(self, stats: list[EvaluatorStats]) -> None:
+        """Replace public evaluator aggregate rows with validated stats."""
+        self.connection.execute("DELETE FROM evaluator_stats")
+        self.connection.executemany(
+            """
+            INSERT INTO evaluator_stats (evaluator_id, stats_json)
+            VALUES (?, ?)
+            """,
+            [
+                (
+                    stat.evaluator.id or stat.evaluator.name,
+                    stat.model_dump_json(exclude_none=True),
+                )
+                for stat in stats
+            ],
+        )
+
+    def iter_evaluator_stats(self) -> Iterator[EvaluatorStats]:
+        """Yield public evaluator stats from the store in deterministic order."""
+        rows = self.connection.execute(
+            """
+            SELECT stats_json
+            FROM evaluator_stats
+            ORDER BY evaluator_id
+            """
+        )
+        for (stats_json,) in rows:
+            yield EvaluatorStats.model_validate_json(stats_json)

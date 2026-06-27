@@ -7,7 +7,14 @@ from datetime import UTC, datetime
 from io import BytesIO
 
 import pytest
-from ga_schemas.models import RawThesis
+from ga_schemas.models import (
+    Evaluator,
+    EvaluatorRole,
+    EvaluatorStats,
+    Level,
+    ParsedThesis,
+    RawThesis,
+)
 from typer.testing import CliRunner
 
 from ga_pipeline.cli import app
@@ -25,14 +32,6 @@ def test_help_lists_all_subcommands() -> None:
     assert result.exit_code == 0
     for sub in SUBCOMMANDS:
         assert sub in result.stdout
-
-
-def test_unimplemented_subcommands_report_todo() -> None:
-    """The later stages remain wired up while their implementations are deferred."""
-    for sub in ("aggregate", "build"):
-        result = runner.invoke(app, [sub])
-        assert result.exit_code == 0, f"{sub} exited {result.exit_code}"
-        assert "not implemented yet (TODO)" in result.stdout
 
 
 def test_parse_writes_valid_parsed_records(tmp_path) -> None:
@@ -125,6 +124,106 @@ def test_scrape_harvests_oai_records_into_sqlite(tmp_path, monkeypatch) -> None:
     assert "advisor" in rows[0][2]
 
 
+def test_aggregate_writes_probabilities_and_gates_small_groups(tmp_path) -> None:
+    """Aggregate emits only min-N evaluators and normalises grade probabilities."""
+    store = tmp_path / "processing.sqlite"
+    with ProcessingStore(store) as processing_store:
+        processing_store.replace_parsed_theses(
+            [
+                (
+                    "raw-1",
+                    _parsed_thesis(
+                        "1", supervisor="Public, Pat", opponent="Private, Pia", grade=1
+                    ),
+                ),
+                (
+                    "raw-2",
+                    _parsed_thesis(
+                        "2", supervisor="Public, Pat", opponent="Other, Oli", grade=2
+                    ),
+                ),
+                (
+                    "raw-3",
+                    _parsed_thesis(
+                        "3", supervisor="Private, Pia", opponent="Other, Oli", grade=3
+                    ),
+                ),
+            ]
+        )
+
+    result = runner.invoke(app, ["aggregate", "--store", str(store), "--min-n", "2"])
+
+    assert result.exit_code == 0, result.output
+    assert "stored 3 evaluator stat record(s) with min-n 2" in result.stdout
+    with ProcessingStore(store) as processing_store:
+        stats = list(processing_store.iter_evaluator_stats())
+
+    by_name = {stat.evaluator.name: stat for stat in stats}
+    assert set(by_name) == {"Public, Pat", "Private, Pia", "Other, Oli"}
+    for stat in stats:
+        assert sum(stat.grade_probabilities.values()) == pytest.approx(1.0)
+
+    pat = by_name["Public, Pat"]
+    assert pat.grade_distribution == {"1": 1, "2": 1}
+    assert pat.grade_probabilities == {"1": 0.5, "2": 0.5}
+    assert pat.by_role == {"supervisor": {"1": 1, "2": 1}}
+    assert pat.by_level == {"bachelor": {"2": 1}, "master": {"1": 1}}
+
+
+def test_aggregate_withholds_below_min_n_evaluators(tmp_path) -> None:
+    """Evaluators below the configured served threshold are not emitted."""
+    store = tmp_path / "processing.sqlite"
+    with ProcessingStore(store) as processing_store:
+        processing_store.replace_parsed_theses(
+            [
+                (
+                    "raw-1",
+                    _parsed_thesis("1", supervisor="Kept, Kim", opponent="Hidden, Hal", grade=1),
+                ),
+                (
+                    "raw-2",
+                    _parsed_thesis("2", supervisor="Kept, Kim", opponent="Other, Ora", grade=2),
+                ),
+            ]
+        )
+
+    result = runner.invoke(app, ["aggregate", "--store", str(store), "--min-n", "2"])
+
+    assert result.exit_code == 0, result.output
+    with ProcessingStore(store) as processing_store:
+        stats = list(processing_store.iter_evaluator_stats())
+
+    assert [stat.evaluator.name for stat in stats] == ["Kept, Kim"]
+
+
+def test_build_writes_static_evaluator_stats_json(tmp_path) -> None:
+    """Build writes the served static JSON artifact from stored aggregate rows."""
+    store = tmp_path / "processing.sqlite"
+    output_dir = tmp_path / "aggregates"
+    with ProcessingStore(store) as processing_store:
+        processing_store.replace_evaluator_stats(
+            [
+                EvaluatorStats(
+                    evaluator=Evaluator(name="Public, Pat", id="public-pat"),
+                    total_theses=2,
+                    grade_distribution={"1": 1, "2": 1},
+                    grade_probabilities={"1": 0.5, "2": 0.5},
+                    last_updated=datetime(2026, 6, 27, tzinfo=UTC).date(),
+                )
+            ]
+        )
+
+    result = runner.invoke(
+        app,
+        ["build", "--store", str(store), "--output-dir", str(output_dir)],
+    )
+
+    assert result.exit_code == 0, result.output
+    output = output_dir / "evaluator-stats.json"
+    assert output.exists()
+    assert '"name": "Public, Pat"' in output.read_text(encoding="utf-8")
+
+
 class _Response(BytesIO):
     def __enter__(self) -> _Response:
         return self
@@ -207,6 +306,35 @@ def _raw_thesis(
                 ]
             )
         },
+    )
+
+
+def _parsed_thesis(
+    suffix: str,
+    *,
+    supervisor: str,
+    opponent: str,
+    grade: int,
+) -> ParsedThesis:
+    return ParsedThesis(
+        id=f"parsed-{suffix}",
+        title=f"Thesis {suffix}",
+        author="Student, Stan",
+        year=2024,
+        level=Level.master if int(suffix) % 2 else Level.bachelor,
+        language="en",
+        supervisor=Evaluator(
+            name=supervisor,
+            id=supervisor.lower().replace(", ", "-"),
+            role=EvaluatorRole.supervisor,
+        ),
+        opponent=Evaluator(
+            name=opponent,
+            id=opponent.lower().replace(", ", "-"),
+            role=EvaluatorRole.opponent,
+        ),
+        defense_grade=grade,
+        source_url=f"https://example.test/{suffix}",
     )
 
 
