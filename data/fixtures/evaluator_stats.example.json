@@ -1,0 +1,49 @@
+{
+  "evaluator": {
+    "name": "doc. PhDr. Adam Geršl Ph.D.",
+    "id": "gersl-adam",
+    "role": null
+  },
+  "total_theses": 42,
+  "grade_distribution": {
+    "1": 25,
+    "2": 13,
+    "3": 3,
+    "4": 1
+  },
+  "grade_probabilities": {
+    "1": 0.5952,
+    "2": 0.3095,
+    "3": 0.0714,
+    "4": 0.0238
+  },
+  "by_role": {
+    "supervisor": {
+      "1": 18,
+      "2": 8,
+      "3": 1,
+      "4": 0
+    },
+    "opponent": {
+      "1": 7,
+      "2": 5,
+      "3": 2,
+      "4": 1
+    }
+  },
+  "by_level": {
+    "bachelor": {
+      "1": 10,
+      "2": 6,
+      "3": 1,
+      "4": 0
+    },
+    "master": {
+      "1": 15,
+      "2": 7,
+      "3": 2,
+      "4": 1
+    }
+  },
+  "last_updated": "2026-06-27"
+}

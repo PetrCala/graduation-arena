@@ -1,0 +1,157 @@
+{
+  "$defs": {
+    "Evaluator": {
+      "additionalProperties": false,
+      "description": "A person who evaluates a thesis (supervisor or opponent).\n\n``v0`` \u2014 loose. ``id`` and ``role`` are optional because raw sources may not\nexpose a stable identifier, and an ``Evaluator`` may be referenced outside the\ncontext of a single role (e.g. in aggregated stats).",
+      "properties": {
+        "name": {
+          "description": "Full display name of the evaluator.",
+          "title": "Name",
+          "type": "string"
+        },
+        "id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Stable identifier for the evaluator, if known. Scheme TBD.",
+          "title": "Id"
+        },
+        "role": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EvaluatorRole"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Role for the referencing thesis, if applicable."
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "Evaluator",
+      "type": "object"
+    },
+    "EvaluatorRole": {
+      "description": "Role an evaluator plays for a given thesis.",
+      "enum": [
+        "supervisor",
+        "opponent"
+      ],
+      "title": "EvaluatorRole",
+      "type": "string"
+    },
+    "Level": {
+      "description": "Thesis level.",
+      "enum": [
+        "bachelor",
+        "master"
+      ],
+      "title": "Level",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "A normalised thesis record produced by the parser.\n\n``v0`` \u2014 the core fields the web app needs for the supervisor + opponent lookup,\nplus light metadata. Some fields are optional because not every source record\nwill expose them.",
+  "properties": {
+    "id": {
+      "description": "Stable id for the thesis (carried from RawThesis).",
+      "title": "Id",
+      "type": "string"
+    },
+    "title": {
+      "description": "Thesis title.",
+      "title": "Title",
+      "type": "string"
+    },
+    "author": {
+      "description": "Thesis author (student) full name.",
+      "title": "Author",
+      "type": "string"
+    },
+    "year": {
+      "description": "Year of defense / submission.",
+      "title": "Year",
+      "type": "integer"
+    },
+    "level": {
+      "$ref": "#/$defs/Level",
+      "description": "bachelor or master."
+    },
+    "language": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Language of the thesis (e.g. 'cs', 'en'). Optional for v0.",
+      "title": "Language"
+    },
+    "supervisor": {
+      "$ref": "#/$defs/Evaluator",
+      "description": "The thesis supervisor."
+    },
+    "opponent": {
+      "$ref": "#/$defs/Evaluator",
+      "description": "The thesis opponent."
+    },
+    "defense_grade": {
+      "anyOf": [
+        {
+          "maximum": 4,
+          "minimum": 1,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Overall defense grade on the provisional 1-4 scale (1 = best).",
+      "title": "Defense Grade"
+    },
+    "abstract": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Thesis abstract.",
+      "title": "Abstract"
+    },
+    "source_url": {
+      "description": "URL of the source record.",
+      "title": "Source Url",
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "title",
+    "author",
+    "year",
+    "level",
+    "supervisor",
+    "opponent",
+    "source_url"
+  ],
+  "title": "ParsedThesis",
+  "type": "object"
+}

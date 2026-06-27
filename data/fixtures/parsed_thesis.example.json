@@ -1,0 +1,21 @@
+{
+  "id": "ies-thesis-2023-104857",
+  "title": "The Impact of Monetary Policy Shocks on Czech Housing Prices",
+  "author": "Jan Novák",
+  "year": 2023,
+  "level": "master",
+  "language": "en",
+  "supervisor": {
+    "name": "doc. PhDr. Adam Geršl Ph.D.",
+    "id": "gersl-adam",
+    "role": "supervisor"
+  },
+  "opponent": {
+    "name": "PhDr. Jaromír Baxa Ph.D.",
+    "id": "baxa-jaromir",
+    "role": "opponent"
+  },
+  "defense_grade": 1,
+  "abstract": "This thesis examines how unexpected monetary policy shocks transmit to residential property prices in the Czech Republic using a structural VAR identified with high-frequency surprises.",
+  "source_url": "https://dspace.cuni.cz/handle/20.500.11956/104857"
+}

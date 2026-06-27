@@ -1,0 +1,135 @@
+{
+  "$defs": {
+    "Evaluator": {
+      "additionalProperties": false,
+      "description": "A person who evaluates a thesis (supervisor or opponent).\n\n``v0`` \u2014 loose. ``id`` and ``role`` are optional because raw sources may not\nexpose a stable identifier, and an ``Evaluator`` may be referenced outside the\ncontext of a single role (e.g. in aggregated stats).",
+      "properties": {
+        "name": {
+          "description": "Full display name of the evaluator.",
+          "title": "Name",
+          "type": "string"
+        },
+        "id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Stable identifier for the evaluator, if known. Scheme TBD.",
+          "title": "Id"
+        },
+        "role": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EvaluatorRole"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Role for the referencing thesis, if applicable."
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "Evaluator",
+      "type": "object"
+    },
+    "EvaluatorRole": {
+      "description": "Role an evaluator plays for a given thesis.",
+      "enum": [
+        "supervisor",
+        "opponent"
+      ],
+      "title": "EvaluatorRole",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Per-evaluator aggregated grade statistics \u2014 the artifact the web app serves.\n\n``v0`` \u2014 grade distribution (counts) and probabilities (normalised) are keyed by\nthe string form of the grade so the JSON is self-describing and the grade type\ncan change without reshaping the contract.",
+  "properties": {
+    "evaluator": {
+      "$ref": "#/$defs/Evaluator",
+      "description": "The evaluator these stats describe."
+    },
+    "total_theses": {
+      "description": "Total number of theses this evaluator evaluated in the dataset.",
+      "minimum": 0,
+      "title": "Total Theses",
+      "type": "integer"
+    },
+    "grade_distribution": {
+      "additionalProperties": {
+        "type": "integer"
+      },
+      "description": "Count of theses per grade, keyed by grade as a string.",
+      "title": "Grade Distribution",
+      "type": "object"
+    },
+    "grade_probabilities": {
+      "additionalProperties": {
+        "type": "number"
+      },
+      "description": "Probability of each grade (counts normalised to ~1.0).",
+      "title": "Grade Probabilities",
+      "type": "object"
+    },
+    "by_role": {
+      "anyOf": [
+        {
+          "additionalProperties": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Optional grade distribution broken down by evaluator role.",
+      "title": "By Role"
+    },
+    "by_level": {
+      "anyOf": [
+        {
+          "additionalProperties": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Optional grade distribution broken down by thesis level.",
+      "title": "By Level"
+    },
+    "last_updated": {
+      "description": "Date these aggregates were last recomputed.",
+      "format": "date",
+      "title": "Last Updated",
+      "type": "string"
+    }
+  },
+  "required": [
+    "evaluator",
+    "total_theses",
+    "last_updated"
+  ],
+  "title": "EvaluatorStats",
+  "type": "object"
+}
