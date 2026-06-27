@@ -16,6 +16,12 @@ Tracked issues (all assigned to you):
 
 Do steps 2→5 **in order** — each depends on the previous one.
 
+> **⚠ Legal gate ([#14](https://github.com/PetrCala/graduation-arena/issues/14)).**
+> Production scraping and committing real records are gated by the named-vs-anonymised
+> go/no-go decision. You **can** run the read-only `xoai` verification in A1 (#22) now, but
+> **hold on committing real fixtures and on any live `scrape` run until #14 is decided.**
+> Check with Petr before that step.
+
 ## 0. One-time setup (~15 min)
 
 ```bash
