@@ -88,6 +88,32 @@ export function normalizeName(name: string): string {
 }
 
 /**
+ * Initials for an evaluator, used as the avatar fallback when no photo is available.
+ *
+ * Drops academic titles the same way {@link normalizeName} does (so
+ * "doc. PhDr. Adam Geršl Ph.D." → "AG"), then takes the first letter of the first and last
+ * remaining name tokens, upper-cased. Diacritics are preserved on the kept letters. Falls
+ * back to the first character of the raw input, or "?" when there is nothing usable.
+ */
+export function evaluatorInitials(name: string): string {
+	// Drop dots first so "Ph.D." / "M.A." collapse to single tokens the title filter
+	// recognises, while keeping case and diacritics on the letters we actually display.
+	const tokens = name
+		.replace(/\./g, '')
+		.split(/[^\p{L}\p{N}]+/u)
+		.filter((token) => token.length > 0);
+	const fold = (token: string) => token.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+	const names = tokens.filter((token) => !TITLE_TOKENS.has(fold(token)));
+	if (names.length === 0) {
+		const first = name.trim()[0];
+		return first ? first.toUpperCase() : '?';
+	}
+	const first = names[0][0];
+	const last = names.length > 1 ? names[names.length - 1][0] : '';
+	return (first + last).toUpperCase();
+}
+
+/**
  * Load the `EvaluatorStats` aggregates from the static JSON artifact.
  *
  * @param fetchFn fetch implementation (SvelteKit `fetch` in load functions, global

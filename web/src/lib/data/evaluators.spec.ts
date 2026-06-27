@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import type { EvaluatorStats } from '$schemas';
 import {
 	EVALUATOR_STATS_URL,
+	evaluatorInitials,
 	findByName,
 	gradeBreakdown,
 	loadEvaluatorStats,
@@ -47,6 +48,23 @@ describe('normalizeName', () => {
 	it('returns an empty string for title-only or blank input', () => {
 		expect(normalizeName('   ')).toBe('');
 		expect(normalizeName('Ph.D.')).toBe('');
+	});
+});
+
+describe('evaluatorInitials', () => {
+	it('drops titles and uses the first and last name initials', () => {
+		expect(evaluatorInitials('doc. PhDr. Adam Geršl Ph.D.')).toBe('AG');
+		expect(evaluatorInitials('prof. Ing. Michal Mejstřík CSc.')).toBe('MM');
+		// "M.A." must be treated as a title, not a name token
+		expect(evaluatorInitials('Mgr. Barbara Pertold-Gebicka M.A. Ph.D.')).toBe('BG');
+	});
+
+	it('returns a single initial for a one-token name', () => {
+		expect(evaluatorInitials('Madonna')).toBe('M');
+	});
+
+	it('falls back gracefully when there is nothing usable', () => {
+		expect(evaluatorInitials('   ')).toBe('?');
 	});
 });
 
