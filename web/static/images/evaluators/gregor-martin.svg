@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80" role="img" aria-label="Cat avatar">
+  <rect width="80" height="80" fill="#bfdbfe"/>
+  <polygon points="20,31 24,9 41,27" fill="#9ca3af"/>
+  <polygon points="60,31 56,9 39,27" fill="#9ca3af"/>
+  <polygon points="25,28 27,15 36,26" fill="#f9a8d4"/>
+  <polygon points="55,28 53,15 44,26" fill="#f9a8d4"/>
+  <ellipse cx="40" cy="46" rx="26" ry="23" fill="#9ca3af"/>
+  <path d="M26 46 q5 -6 10 0" stroke="#22223b" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M44 46 q5 -6 10 0" stroke="#22223b" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <path d="M37 49 h6 l-3 4 z" fill="#fb7185"/>
+  <path d="M40 53 q-4 4 -8 1" stroke="#3f3f46" stroke-width="1.6" fill="none" stroke-linecap="round"/><path d="M40 53 q4 4 8 1" stroke="#3f3f46" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+  <g stroke="#3f3f46" stroke-width="1.2" stroke-linecap="round">
+    <line x1="13" y1="47" x2="27" y2="49"/>
+    <line x1="13" y1="53" x2="27" y2="53"/>
+    <line x1="67" y1="47" x2="53" y2="49"/>
+    <line x1="67" y1="53" x2="53" y2="53"/>
+  </g>
+</svg>
