@@ -30,6 +30,16 @@ export interface EvaluatorPairLookup {
 	opponent: EvaluatorStats | null;
 }
 
+/** A single grade's count and probability, ready for display. */
+export interface GradeRow {
+	/** Grade as it appears in the contract (string form, e.g. "1"). */
+	grade: string;
+	/** Number of theses that received this grade. */
+	count: number;
+	/** Probability of this grade (0–1). */
+	probability: number;
+}
+
 /**
  * Normalise an evaluator name for tolerant matching.
  *
@@ -126,4 +136,35 @@ export function lookupPair(
 		supervisor: findByName(stats, supervisorName),
 		opponent: findByName(stats, opponentName)
 	};
+}
+
+/**
+ * Build the per-grade breakdown for an evaluator, sorted by grade ascending.
+ *
+ * Grades present in either the distribution or the probabilities are included, so a
+ * grade is never silently dropped. Missing counts default to 0 and a missing
+ * probability falls back to `count / total_theses` (0 when there are no theses).
+ */
+export function gradeBreakdown(stats: EvaluatorStats): GradeRow[] {
+	const distribution = stats.grade_distribution ?? {};
+	const probabilities = stats.grade_probabilities ?? {};
+	const grades = new Set([...Object.keys(distribution), ...Object.keys(probabilities)]);
+	return [...grades]
+		.map((grade) => {
+			const count = distribution[grade] ?? 0;
+			const probability =
+				probabilities[grade] ?? (stats.total_theses > 0 ? count / stats.total_theses : 0);
+			return { grade, count, probability };
+		})
+		.sort((a, b) => Number(a.grade) - Number(b.grade));
+}
+
+/**
+ * The single most likely grade for an evaluator, or `null` when no grades are recorded.
+ * Ties resolve to the lowest (best) grade, since {@link gradeBreakdown} is sorted ascending.
+ */
+export function mostLikelyGrade(stats: EvaluatorStats): GradeRow | null {
+	const rows = gradeBreakdown(stats);
+	if (rows.length === 0) return null;
+	return rows.reduce((best, row) => (row.probability > best.probability ? row : best));
 }

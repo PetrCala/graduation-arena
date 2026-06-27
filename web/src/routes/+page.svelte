@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { lookupPair, type EvaluatorPairLookup } from '$lib/data/evaluators';
+	import EvaluatorResult from '$lib/components/EvaluatorResult.svelte';
 	import type { EvaluatorStats } from '$schemas';
 	import type { PageData } from './$types';
 
@@ -10,17 +11,11 @@
 	let supervisorName = $state('');
 	let opponentName = $state('');
 
-	const result = $derived<EvaluatorPairLookup | null>(
-		supervisorName || opponentName ? lookupPair(stats, supervisorName, opponentName) : null
-	);
+	const hasQuery = $derived(supervisorName.trim().length > 0 || opponentName.trim().length > 0);
 
-	function topGrade(s: EvaluatorStats): string {
-		const probs = s.grade_probabilities ?? {};
-		const entries = Object.entries(probs);
-		if (entries.length === 0) return '—';
-		const [grade, p] = entries.reduce((a, b) => (b[1] > a[1] ? b : a));
-		return `${grade} (${Math.round(p * 100)}%)`;
-	}
+	const result = $derived<EvaluatorPairLookup | null>(
+		hasQuery ? lookupPair(stats, supervisorName, opponentName) : null
+	);
 </script>
 
 <svelte:head>
@@ -55,18 +50,8 @@
 
 	{#if result}
 		<section class="mt-6 grid gap-4 sm:grid-cols-2">
-			{#each [['Supervisor', result.supervisor], ['Opponent', result.opponent]] as const as [role, hit] (role)}
-				<article class="rounded border border-gray-200 p-4">
-					<h2 class="text-sm font-semibold tracking-wide text-gray-500 uppercase">{role}</h2>
-					{#if hit}
-						<p class="mt-1 font-medium">{hit.evaluator.name}</p>
-						<p class="text-sm text-gray-600">{hit.total_theses} theses</p>
-						<p class="text-sm text-gray-600">Most likely grade: {topGrade(hit)}</p>
-					{:else}
-						<p class="mt-1 text-sm text-gray-500">No statistics found.</p>
-					{/if}
-				</article>
-			{/each}
+			<EvaluatorResult role="Supervisor" name={supervisorName} stats={result.supervisor} />
+			<EvaluatorResult role="Opponent" name={opponentName} stats={result.opponent} />
 		</section>
 	{/if}
 

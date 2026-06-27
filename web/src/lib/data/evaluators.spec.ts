@@ -3,8 +3,10 @@ import type { EvaluatorStats } from '$schemas';
 import {
 	EVALUATOR_STATS_URL,
 	findByName,
+	gradeBreakdown,
 	loadEvaluatorStats,
 	lookupPair,
+	mostLikelyGrade,
 	normalizeName,
 	type FetchLike
 } from './evaluators';
@@ -99,6 +101,54 @@ describe('distribution / probability shape', () => {
 				Object.keys(stats.grade_distribution ?? {}).sort()
 			);
 		}
+	});
+});
+
+describe('gradeBreakdown', () => {
+	it('returns every grade sorted ascending with count and probability', () => {
+		const rows = gradeBreakdown(SAMPLE[0]);
+		expect(rows.map((r) => r.grade)).toEqual(['1', '2', '3']);
+		expect(rows[0]).toEqual({ grade: '1', count: 2, probability: 0.5 });
+	});
+
+	it('includes grades present in only one of the maps and defaults count to 0', () => {
+		const rows = gradeBreakdown({
+			evaluator: { name: 'Solo Grade' },
+			total_theses: 1,
+			grade_distribution: { '1': 1 },
+			grade_probabilities: { '1': 0.8, '4': 0.2 },
+			last_updated: '2026-06-27'
+		});
+		expect(rows.map((r) => r.grade)).toEqual(['1', '4']);
+		expect(rows.find((r) => r.grade === '4')).toEqual({ grade: '4', count: 0, probability: 0.2 });
+	});
+
+	it('falls back to count / total_theses when a probability is missing', () => {
+		const rows = gradeBreakdown({
+			evaluator: { name: 'No Probs' },
+			total_theses: 4,
+			grade_distribution: { '1': 3, '2': 1 },
+			last_updated: '2026-06-27'
+		});
+		expect(rows.find((r) => r.grade === '1')?.probability).toBeCloseTo(0.75, 5);
+	});
+
+	it('returns an empty array when no grades are recorded', () => {
+		expect(
+			gradeBreakdown({ evaluator: { name: 'Empty' }, total_theses: 0, last_updated: '2026-06-27' })
+		).toEqual([]);
+	});
+});
+
+describe('mostLikelyGrade', () => {
+	it('returns the highest-probability grade', () => {
+		expect(mostLikelyGrade(SAMPLE[0])?.grade).toBe('1');
+	});
+
+	it('returns null when no grades are recorded', () => {
+		expect(
+			mostLikelyGrade({ evaluator: { name: 'Empty' }, total_theses: 0, last_updated: '2026-06-27' })
+		).toBeNull();
 	});
 });
 
