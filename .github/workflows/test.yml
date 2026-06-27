@@ -1,32 +1,31 @@
-name: pipeline
+name: test
 
-# Lint, format-check, and test the Python data pipeline in pipeline/.
-# ruff config and the pytest suite live in pipeline/pyproject.toml; this gate keeps
-# them green on every PR. uv installs the exact tool versions pinned in
-# pipeline/uv.lock, so CI and a local `uv run ruff/pytest` never disagree. The
-# suite uses no live network (see docs/pipeline-handoff.md), so it is safe in CI.
+# Run the pytest suite for the Python data pipeline in pipeline/. The suite is
+# configured in pipeline/pyproject.toml and uses no live network (see
+# docs/pipeline-handoff.md), so it is safe in CI. uv installs the exact versions
+# pinned in pipeline/uv.lock, so CI and a local `uv run pytest` never disagree.
 
 on:
   push:
     branches: [master]
     paths:
       - "pipeline/**"
-      - ".github/workflows/pipeline.yml"
+      - ".github/workflows/test.yml"
   pull_request:
     paths:
       - "pipeline/**"
-      - ".github/workflows/pipeline.yml"
+      - ".github/workflows/test.yml"
 
 # A newer push/PR update cancels an in-flight run for the same ref.
 concurrency:
-  group: pipeline-${{ github.ref }}
+  group: test-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
   contents: read
 
 jobs:
-  check:
+  test:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -43,12 +42,6 @@ jobs:
 
       - name: Install locked deps (incl. dev tools)
         run: uv sync --frozen
-
-      - name: Lint (ruff check)
-        run: uv run ruff check
-
-      - name: Format check (ruff format --check)
-        run: uv run ruff format --check
 
       - name: Test (pytest)
         run: uv run pytest

@@ -1,0 +1,47 @@
+name: lint
+
+# Lint the Python data pipeline in pipeline/ with `ruff check`.
+# ruff's config lives in pipeline/pyproject.toml; uv installs the exact tool
+# versions pinned in pipeline/uv.lock, so CI and a local `uv run ruff check`
+# never disagree.
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "pipeline/**"
+      - ".github/workflows/lint.yml"
+  pull_request:
+    paths:
+      - "pipeline/**"
+      - ".github/workflows/lint.yml"
+
+# A newer push/PR update cancels an in-flight run for the same ref.
+concurrency:
+  group: lint-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: pipeline
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+          enable-cache: true
+          cache-dependency-glob: "pipeline/uv.lock"
+
+      - name: Install locked deps (incl. dev tools)
+        run: uv sync --frozen
+
+      - name: Lint (ruff check)
+        run: uv run ruff check
