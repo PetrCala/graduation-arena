@@ -4,6 +4,12 @@ Scrape, parse, and statistically analyze publicly available bachelor/master thes
 the Institute of Economic Studies (IES), FSV, Charles University, and serve grade
 predictions (by supervisor + opponent) from a hosted website.
 
+## Layout
+
+Monorepo. Each top-level package is self-contained with its own README and toolchain —
+read it before working there. Architecture, data-source facts, and harvesting design live
+in `docs/` — read the relevant note before non-trivial work.
+
 ## Workflow
 
 All work is tracked through **GitHub Issues** — there is no project board, and no other
