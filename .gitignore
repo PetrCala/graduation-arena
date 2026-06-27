@@ -19,6 +19,10 @@ dist/
 .DS_Store
 Thumbs.db
 
+# Pipeline output: per-evaluator aggregates are a CI build artifact, not committed
+# (personal data — see docs/app-architecture.md). The dir is kept via .gitkeep.
+data/aggregates/*.json
+
 # Claude Code per-session worktrees — never commit these.
 .claude/worktrees/
 

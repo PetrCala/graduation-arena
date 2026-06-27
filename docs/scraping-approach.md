@@ -156,7 +156,7 @@ extract posudky      funnel §3 → minimal per-evaluator record, then DISCARD p
    ↓
 normalize            §4 — grade scales, A–F↔1–4 crosswalk, evaluator identity, year/level
    ↓
-store                processing store (SQLite/Parquet) → later aggregated to static JSON
+store                processing store (SQLite) → later aggregated to static JSON
 ```
 
 Maps onto the existing `scrape | parse | aggregate | build` CLI:
@@ -190,7 +190,7 @@ Maps onto the existing `scrape | parse | aggregate | build` CLI:
 | `bitstream_selector` | Per record, pick **only** the two posudek bitstreams via REST; ignore the rest. |
 | `posudek_extractor` | Run the §3 funnel (route → regex → OCR → LLM); emit minimal evaluator record + confidence. |
 | `normalizer` | Grade scales, A–F↔1–4 crosswalk, evaluator identity resolution, year/level. |
-| `store` | Resumable processing store (SQLite/Parquet); provenance (URL + checksum), no PDF bytes. |
+| `store` | Resumable processing store (SQLite); provenance (URL + checksum), no PDF bytes. |
 | `refresh` | Watermark + incremental orchestration for the bi-annual re-harvest. |
 
 No code bodies yet — these are responsibility boundaries to validate against the A1 spike.
