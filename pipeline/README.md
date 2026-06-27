@@ -39,3 +39,5 @@ uv run pytest         # tests
 ```
 
 `uv.lock` is committed; `.venv/` is not.
+
+<!-- ci-smoke-test: throwaway change to verify the pipeline CI gate triggers; do not merge -->
