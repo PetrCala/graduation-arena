@@ -95,7 +95,9 @@ graduation-arena/
 
 ## Deferred decisions
 
-- **Final schema fields** — pending the source-access spike + real fixtures (A1) and the
-  legal verdict on naming vs. anonymising/aggregating evaluators. A provisional `v0` draft
-  comes first (K2).
+- **Final schema fields** — pending the source-access spike + real fixtures (A1). A
+  provisional `v0` draft comes first (K2). The legal verdict is **decided (X1, #14):
+  proceed with the public site and name evaluators** — the schema keeps named,
+  person-linkable evaluators, subject to the served-boundary safeguards in #18 (min-N
+  gating, no student names served, opt-out).
 - **Firestore** — only if data size or live-query needs outgrow static JSON.
