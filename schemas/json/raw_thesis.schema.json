@@ -1,0 +1,35 @@
+{
+  "additionalProperties": false,
+  "description": "A raw scraped thesis record, before parsing/normalisation.\n\n``v0`` \u2014 intentionally minimal. We only commit to the provenance fields needed\nto fetch, dedupe, and re-parse a record; everything else lives untyped in\n``raw_fields`` until the parser shape is known.",
+  "properties": {
+    "source_id": {
+      "description": "Identifier of the record in the source system (e.g. a thesis id).",
+      "title": "Source Id",
+      "type": "string"
+    },
+    "source_url": {
+      "description": "URL the record was fetched from.",
+      "title": "Source Url",
+      "type": "string"
+    },
+    "fetched_at": {
+      "description": "UTC timestamp when the record was fetched.",
+      "format": "date-time",
+      "title": "Fetched At",
+      "type": "string"
+    },
+    "raw_fields": {
+      "additionalProperties": true,
+      "description": "Free-form bag of raw scraped fields. Untyped for v0.",
+      "title": "Raw Fields",
+      "type": "object"
+    }
+  },
+  "required": [
+    "source_id",
+    "source_url",
+    "fetched_at"
+  ],
+  "title": "RawThesis",
+  "type": "object"
+}

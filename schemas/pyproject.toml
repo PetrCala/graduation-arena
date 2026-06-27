@@ -1,0 +1,18 @@
+# Minimal, self-contained setup for the v0 data contract (issue #4).
+#
+# This pins only what the schema export needs (pydantic v2), so the contract can be
+# generated and checked without depending on the full pipeline tooling baseline (K1).
+# Install into a local venv (not committed):
+#
+#   python -m venv .venv
+#   .venv/Scripts/python -m pip install -e schemas   # or: pip install pydantic>=2
+#   python schemas/export.py
+[project]
+name = "graduation-arena-schemas"
+version = "0.0.0"
+description = "Provisional v0 data contract (pydantic source of truth) for graduation-arena."
+requires-python = ">=3.11"
+dependencies = ["pydantic>=2"]
+
+[tool.setuptools]
+py-modules = ["models", "export"]
