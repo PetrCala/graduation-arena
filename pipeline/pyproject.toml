@@ -5,8 +5,13 @@ description = "Data pipeline for graduation-arena: scrape, parse, aggregate, and
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "graduation-arena-schemas",
+    "pydantic>=2.13,<2.14",
     "typer>=0.12",
 ]
+
+[tool.uv.sources]
+graduation-arena-schemas = { path = "../schemas", editable = true }
 
 [project.scripts]
 ga-pipeline = "ga_pipeline.cli:app"
