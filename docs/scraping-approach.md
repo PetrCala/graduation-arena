@@ -214,5 +214,6 @@ No code bodies yet — these are responsibility boundaries to validate against t
 - **Q5 — Posudek form-type detection.** How to robustly route IES-English vs FSV-Czech forms
   (and detect scanned PDFs needing OCR) before extraction — header sniff, keyword anchors, or
   layout heuristics?
-- **Q6 — Legal field-level verdict.** Named vs. anonymised/aggregated evaluators is still open
-  (see app-architecture deferred decisions) and may constrain what `store` persists.
+- **Q6 — Legal field-level verdict.** **Resolved (X1, #14): proceed with the public site and
+  name evaluators.** `store` may persist named, person-linkable evaluator identities; student
+  names are never served (min-N gating + served-boundary safeguards, #18).
