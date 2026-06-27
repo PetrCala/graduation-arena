@@ -26,7 +26,15 @@ here. They are imported through the `$schemas` alias (configured in `vite.config
   (served at `/data/evaluator-stats.json`). Replaced by real pipeline output later.
 - Typed loader + lookup: [`src/lib/data/evaluators.ts`](./src/lib/data/evaluators.ts) — loads
   the stats and resolves a supervisor + opponent name pair to their `EvaluatorStats` (tolerant
-  matching, graceful not-found). Tests in `src/lib/data/evaluators.spec.ts`.
+  matching, graceful not-found). The same module also powers the supervisor explorer: min-N
+  gating, the P(1) / strictness ranking metrics, role/level splits, sorting, and fuzzy search.
+  Tests in `src/lib/data/evaluators.spec.ts`.
+
+## Pages
+
+- `/` — supervisor + opponent grade lookup.
+- `/evaluators` — supervisor explorer: a sortable, searchable directory of every served
+  evaluator. Sorting a column _is_ the leaderboard (most generous, toughest, most theses).
 
 ## Commands
 

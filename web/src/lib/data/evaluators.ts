@@ -194,3 +194,171 @@ export function mostLikelyGrade(stats: EvaluatorStats): GradeRow | null {
 	if (rows.length === 0) return null;
 	return rows.reduce((best, row) => (row.probability > best.probability ? row : best));
 }
+
+// ---------------------------------------------------------------------------
+// Supervisor explorer (#42): gating, ranking metrics, sorting, and search over
+// the full evaluator directory. The page lets a student browse and rank every
+// served evaluator to choose a supervisor; sorting a column *is* the leaderboard.
+// ---------------------------------------------------------------------------
+
+/** Grade string for the top (best) grade on the 1–4 scale. */
+const TOP_GRADE = '1';
+
+/**
+ * Provisional minimum thesis count for an evaluator to be served.
+ *
+ * GDPR served-boundary safeguard (issue #18): a per-named-evaluator grade profile is
+ * personal data and must be suppressed below a minimum group size. The exact threshold
+ * and opt-out policy are still being settled in #18; until the served projection lands,
+ * the web app gates client-side with this conservative default — change it here, in one
+ * place, when #18 fixes the policy.
+ */
+export const MIN_THESES_GATE = 5;
+
+/** Whether an evaluator clears the min-N served boundary (see {@link MIN_THESES_GATE}). */
+export function meetsMinN(stats: EvaluatorStats, threshold: number = MIN_THESES_GATE): boolean {
+	return stats.total_theses >= threshold;
+}
+
+/** Keep only evaluators that pass min-N gating, preserving input order. */
+export function gateEvaluators(
+	stats: readonly EvaluatorStats[],
+	threshold: number = MIN_THESES_GATE
+): EvaluatorStats[] {
+	return stats.filter((s) => meetsMinN(s, threshold));
+}
+
+/**
+ * Probability the evaluator awards the top grade ("1") — the "generosity" metric.
+ * Falls back to the {@link gradeBreakdown} value (count / total) and is `0` when no
+ * grade-1 information is recorded.
+ */
+export function probabilityOfTopGrade(stats: EvaluatorStats): number {
+	const top = gradeBreakdown(stats).find((row) => row.grade === TOP_GRADE);
+	return top?.probability ?? 0;
+}
+
+/**
+ * Mean awarded grade — Σ grade × probability, renormalised by the probability mass so
+ * rounding in the source (probabilities that sum to ~0.999) does not skew it.
+ *
+ * On the 1–4 scale (1 = best) a *higher* mean means a *stricter* grader, so this doubles
+ * as the strictness metric. Returns `null` when no grades are recorded.
+ */
+export function meanGrade(stats: EvaluatorStats): number | null {
+	const rows = gradeBreakdown(stats);
+	const mass = rows.reduce((sum, row) => sum + row.probability, 0);
+	if (mass <= 0) return null;
+	const weighted = rows.reduce((sum, row) => sum + Number(row.grade) * row.probability, 0);
+	return weighted / mass;
+}
+
+/** Total theses an evaluator supervised vs. opposed. Missing buckets count as 0. */
+export interface RoleSplit {
+	supervisor: number;
+	opponent: number;
+}
+
+/** Total theses an evaluator graded at bachelor vs. master level. Missing buckets count as 0. */
+export interface LevelSplit {
+	bachelor: number;
+	master: number;
+}
+
+/** Sum every grade count in a `grade → count` bucket; `0` for a missing/empty bucket. */
+function sumGradeCounts(bucket: Record<string, number> | null | undefined): number {
+	if (!bucket) return 0;
+	return Object.values(bucket).reduce((sum, n) => sum + n, 0);
+}
+
+/** Supervisor-vs-opponent thesis totals from {@link EvaluatorStats.by_role}. */
+export function roleSplit(stats: EvaluatorStats): RoleSplit {
+	return {
+		supervisor: sumGradeCounts(stats.by_role?.supervisor),
+		opponent: sumGradeCounts(stats.by_role?.opponent)
+	};
+}
+
+/** Bachelor-vs-master thesis totals from {@link EvaluatorStats.by_level}. */
+export function levelSplit(stats: EvaluatorStats): LevelSplit {
+	return {
+		bachelor: sumGradeCounts(stats.by_level?.bachelor),
+		master: sumGradeCounts(stats.by_level?.master)
+	};
+}
+
+/** Columns the explorer table can sort by. Sorting one *is* the leaderboard. */
+export type EvaluatorSortKey = 'name' | 'total_theses' | 'p_top_grade' | 'strictness';
+
+/** Sort direction. `desc` puts the largest value (or strictest/most generous) first. */
+export type SortDirection = 'asc' | 'desc';
+
+/** The numeric value a metric key ranks on; `null` when the metric is undefined. */
+function metricValue(stats: EvaluatorStats, key: Exclude<EvaluatorSortKey, 'name'>): number | null {
+	switch (key) {
+		case 'total_theses':
+			return stats.total_theses;
+		case 'p_top_grade':
+			return probabilityOfTopGrade(stats);
+		case 'strictness':
+			return meanGrade(stats);
+	}
+}
+
+/**
+ * Deterministic, direction-independent tie-break so equal rows keep a stable order:
+ * by display name, then by `id` slug (#17).
+ */
+function tieBreak(a: EvaluatorStats, b: EvaluatorStats): number {
+	const byName = a.evaluator.name.localeCompare(b.evaluator.name);
+	if (byName !== 0) return byName;
+	return (a.evaluator.id ?? '').localeCompare(b.evaluator.id ?? '');
+}
+
+/**
+ * Sort evaluators by a column, returning a new array (input is not mutated).
+ *
+ * Evaluators whose metric is `null` (no grades) always sort last, regardless of
+ * direction, so an unknown value never masquerades as the most generous or strictest.
+ * Ties fall back to {@link tieBreak} for a stable, reproducible order.
+ */
+export function sortEvaluators(
+	stats: readonly EvaluatorStats[],
+	key: EvaluatorSortKey,
+	direction: SortDirection = 'desc'
+): EvaluatorStats[] {
+	const dir = direction === 'asc' ? 1 : -1;
+	return [...stats].sort((a, b) => {
+		if (key === 'name') {
+			const byName = normalizeName(a.evaluator.name).localeCompare(normalizeName(b.evaluator.name));
+			return byName !== 0 ? dir * byName : tieBreak(a, b);
+		}
+		const av = metricValue(a, key);
+		const bv = metricValue(b, key);
+		if (av === null || bv === null) {
+			if (av === null && bv === null) return tieBreak(a, b);
+			return av === null ? 1 : -1; // nulls last in both directions
+		}
+		return av !== bv ? dir * (av - bv) : tieBreak(a, b);
+	});
+}
+
+/**
+ * Fuzzy-filter evaluators by a free-text query, reusing the tolerant {@link normalizeName}
+ * folding (drops academic titles and diacritics, ignores name order). The query matches
+ * when every folded query token is a substring of the folded evaluator name, so "gersl",
+ * "adam g", and "Geršl Adam" all match "doc. PhDr. Adam Geršl Ph.D.". An empty or
+ * title-only query returns the list unchanged.
+ */
+export function filterEvaluators(
+	stats: readonly EvaluatorStats[],
+	query: string
+): EvaluatorStats[] {
+	const folded = normalizeName(query);
+	if (folded.length === 0) return [...stats];
+	const tokens = folded.split(' ');
+	return stats.filter((s) => {
+		const name = normalizeName(s.evaluator.name);
+		return tokens.every((token) => name.includes(token));
+	});
+}

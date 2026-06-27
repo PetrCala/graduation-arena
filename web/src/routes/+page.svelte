@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import { lookupPair, type EvaluatorPairLookup } from '$lib/data/evaluators';
 	import EvaluatorResult from '$lib/components/EvaluatorResult.svelte';
 	import type { EvaluatorStats } from '$schemas';
@@ -27,6 +28,11 @@
 	<p class="mt-1 text-gray-600">
 		Look up per-evaluator grade statistics by supervisor and opponent. Runs entirely in your browser
 		against precomputed aggregates.
+	</p>
+	<p class="mt-2 text-sm">
+		<a class="text-gray-500 underline hover:text-gray-900" href={resolve('/evaluators')}>
+			Browse all evaluators → choose your supervisor
+		</a>
 	</p>
 
 	<form class="mt-6 grid gap-4 sm:grid-cols-2">
