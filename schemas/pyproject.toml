@@ -2,17 +2,21 @@
 #
 # This pins only what the schema export needs (pydantic v2), so the contract can be
 # generated and checked without depending on the full pipeline tooling baseline (K1).
-# Install into a local venv (not committed):
+# Install into a local venv (not committed), from this directory:
 #
+#   cd schemas
 #   python -m venv .venv
-#   .venv/Scripts/python -m pip install -e schemas   # or: pip install pydantic>=2
-#   python schemas/export.py
+#   .venv/Scripts/python -m pip install -e .        # POSIX: .venv/bin/python
+#   .venv/Scripts/python -m ga_schemas.export       # writes json/, validates fixtures
+#   .venv/Scripts/python -m ga_schemas.export --check   # CI: verify no drift
 [project]
 name = "graduation-arena-schemas"
 version = "0.0.0"
 description = "Provisional v0 data contract (pydantic source of truth) for graduation-arena."
 requires-python = ">=3.11"
-dependencies = ["pydantic>=2"]
+# Pinned to a minor: the --check drift guard compares committed JSON Schema byte-for-byte
+# against freshly generated output, and pydantic can change that output across minors.
+dependencies = ["pydantic>=2.13,<2.14"]
 
 [tool.setuptools]
-py-modules = ["models", "export"]
+packages = ["ga_schemas"]

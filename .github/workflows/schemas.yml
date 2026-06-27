@@ -1,0 +1,37 @@
+name: schemas
+
+# Enforces the v0 data contract (issue #4): the committed JSON Schema must match the
+# pydantic models, the fixtures must validate, the hand-authored TS must match the schema,
+# and the TS must type-check. Without this, producer (pipeline) and consumer (web) can drift.
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    paths:
+      - "schemas/**"
+      - "data/fixtures/**"
+      - ".github/workflows/schemas.yml"
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: schemas
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install schema package (pydantic)
+        run: pip install -e .
+      - name: Check contract for drift (schema fresh, fixtures valid, TS in sync)
+        run: python -m ga_schemas.export --check
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Type-check the TS types
+        run: npx -y typescript@5 tsc --noEmit --strict ts/types.ts ts/index.ts
