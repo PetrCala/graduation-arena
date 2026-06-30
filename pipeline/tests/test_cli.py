@@ -1,4 +1,4 @@
-"""Smoke tests for the ga-pipeline CLI skeleton."""
+"""Smoke tests for the ga-pipeline CLI."""
 
 from __future__ import annotations
 
@@ -19,9 +19,9 @@ def test_help_lists_all_subcommands() -> None:
         assert sub in result.stdout
 
 
-def test_each_subcommand_runs_and_reports_todo() -> None:
-    """Every stage is wired up, runs, and reports it is not implemented yet."""
-    for sub in SUBCOMMANDS:
+def test_non_scrape_subcommands_run_and_report_todo() -> None:
+    """Stub stages are still wired up and report that they are pending."""
+    for sub in ("parse", "aggregate", "build"):
         result = runner.invoke(app, [sub])
         assert result.exit_code == 0, f"{sub} exited {result.exit_code}"
         assert "not implemented yet (TODO)" in result.stdout
